@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Poker</title>
+<style>
+  :root {
+    --felt: #1a5c2a;
+    --felt-dark: #0f3d1c;
+    --felt-light: #236b32;
+    --gold: #c8a84b;
+    --gold-light: #f0d080;
+    --card-bg: #1e1e2e;
+    --text: #e8e8f0;
+    --text-dim: #8888aa;
+    --red: #e05555;
+    --green: #4caf70;
+    --blue: #5588dd;
+    --orange: #e09944;
+    --purple: #9966cc;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--felt-dark);
+    color: var(--text);
+    min-height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; position: absolute; inset: 0; }
+  .screen.active { display: flex; }
+
+  /* ══ INTRO ══ */
+  #intro {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at center, #1a5c2a 0%, #0a2a10 100%);
+  }
+
+  .intro-logo {
+    font-size: 5rem;
+    filter: drop-shadow(0 0 20px rgba(200,168,75,0.6));
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(200,168,75,0.6)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 40px rgba(200,168,75,0.9)); }
+  }
+
+  .intro-title {
+    font-size: 3.5rem;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: var(--gold-light);
+    text-shadow: 0 0 30px rgba(200,168,75,0.5);
+    margin: 0.2em 0 0.1em;
+  }
+
+  .intro-subtitle {
+    font-size: 1.1rem;
+    color: #aacca0;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+  }
+
+  .intro-tagline {
+    max-width: 520px;
+    text-align: center;
+    line-height: 1.7;
+    color: #c0d8c0;
+    font-size: 1.05rem;
+    margin-bottom: 2.5rem;
+    padding: 0 1rem;
+  }
+
+  .intro-chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 2.5rem;
+    max-width: 480px;
+  }
+
+  .intro-chip {
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.85;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #c8a84b, #f0d080);
+    color: #1a1a00;
+    border: none;
+    padding: 1rem 2.5rem;
+    font-size: 1.2rem;
+    font-weight: 800;
+    border-radius: 50px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 20px rgba(200,168,75,0.4);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(200,168,75,0.6); }
+  .btn-primary:active { transform: translateY(0); }
+
+  /* ══ GAME SCREEN ══ */
+  #game {
+    flex-direction: column;
+    background: radial-gradient(ellipse at 50% 30%, var(--felt) 0%, var(--felt-dark) 70%);
+  }
+
+  /* Top HUD */
+  .hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid rgba(200,168,75,0.2);
+    flex-shrink: 0;
+    gap: 1rem;
+  }
+
+  .hud-meter {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 200px;
+  }
+
+  .hud-meter-icon { font-size: 1.5rem; }
+
+  .hud-meter-info { flex: 1; }
+  .hud-meter-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 0.25rem;
+  }
+
+  .meter-bar {
+    height: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 5px;
+    overflow: hidden;
+    width: 150px;
+  }
+
+  .meter-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.6s ease, background-color 0.6s ease;
+  }
+
+  .meter-fill.privacy {
+    background: linear-gradient(90deg, #4caf70, #8bc34a);
+  }
+  .meter-fill.privacy.warn { background: linear-gradient(90deg, #ff9800, #ffc107); }
+  .meter-fill.privacy.danger { background: linear-gradient(90deg, #f44336, #e91e63); }
+  .meter-fill.convenience { background: linear-gradient(90deg, #2196f3, #03a9f4); }
+
+  .meter-value {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--gold-light);
+    margin-left: 0.4rem;
+    min-width: 32px;
+  }
+
+  .hud-round {
+    text-align: center;
+  }
+  .hud-round-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+  .hud-round-num {
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--gold-light);
+  }
+
+  .hud-score {
+    text-align: right;
+    min-width: 100px;
+  }
+  .hud-score-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+  .hud-score-val {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--gold-light);
+  }
+
+  /* Game arena */
+  .arena {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Table oval */
+  .table-felt {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .table-oval {
+    width: 85%;
+    height: 75%;
+    background: radial-gradient(ellipse at 50% 40%, var(--felt-light), var(--felt));
+    border-radius: 50%;
+    border: 6px solid rgba(200,168,75,0.35);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.4), 0 0 0 4px rgba(0,0,0,0.4);
+    max-width: 900px;
+  }
+
+  /* Service card zone */
+  .service-zone {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+  }
+
+  .dealer-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(200,168,75,0.6);
+  }
+
+  .service-card {
+    background: linear-gradient(145deg, #2a2a3e, #1a1a2a);
+    border: 2px solid var(--gold);
+    border-radius: 18px;
+    padding: 1.2rem 1.5rem;
+    width: 100%;
+    max-width: 640px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(200,168,75,0.1);
+    animation: deal-in 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes deal-in {
+    from { transform: translateY(-60px) scale(0.85); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  .service-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .service-icon {
+    font-size: 2.5rem;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    flex-shrink: 0;
+  }
+
+  .service-info { flex: 1; }
+  .service-name { font-size: 1.3rem; font-weight: 800; color: #fff; }
+  .service-category { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+  .service-desc { font-size: 0.85rem; color: #bbb; margin-top: 0.2rem; }
+
+  .service-asks {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .ask-section { flex: 1; min-width: 200px; }
+  .ask-section-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+  }
+  .ask-section-label.required { color: #ff6b6b; }
+  .ask-section-label.optional { color: #ffd43b; }
+
+  .ask-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .ask-tag {
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .ask-tag.required { background: rgba(220,50,50,0.25); border: 1px solid rgba(220,50,50,0.5); color: #ff9999; }
+  .ask-tag.optional { background: rgba(220,180,50,0.2); border: 1px solid rgba(220,180,50,0.4); color: #ffe066; }
+  .ask-tag.none { color: var(--text-dim); font-style: italic; font-size: 0.8rem; }
+
+  .service-benefit {
+    margin-top: 0.8rem;
+    padding: 0.5rem 0.8rem;
+    background: rgba(76,175,112,0.1);
+    border-left: 3px solid #4caf70;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.8rem;
+    color: #a0d8b0;
+  }
+
+  /* Narrative box */
+  .narrative {
+    position: relative;
+    z-index: 10;
+    max-width: 640px;
+    width: 100%;
+    text-align: center;
+    font-size: 0.85rem;
+    color: rgba(200,200,200,0.7);
+    font-style: italic;
+    min-height: 1.4em;
+    transition: opacity 0.3s;
+  }
+
+  /* Player hand */
+  .hand-zone {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 860px;
+  }
+
+  .hand-label {
+    text-align: center;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(200,168,75,0.6);
+    margin-bottom: 0.6rem;
+  }
+
+  .hand-cards {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .data-card {
+    width: 78px;
+    height: 104px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    cursor: default;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    position: relative;
+    flex-shrink: 0;
+    animation: hand-deal 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  @keyframes hand-deal {
+    from { transform: translateY(60px) scale(0.7); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  .data-card:nth-child(1) { animation-delay: 0.05s; }
+  .data-card:nth-child(2) { animation-delay: 0.10s; }
+  .data-card:nth-child(3) { animation-delay: 0.15s; }
+  .data-card:nth-child(4) { animation-delay: 0.20s; }
+  .data-card:nth-child(5) { animation-delay: 0.25s; }
+  .data-card:nth-child(6) { animation-delay: 0.30s; }
+  .data-card:nth-child(7) { animation-delay: 0.35s; }
+  .data-card:nth-child(8) { animation-delay: 0.40s; }
+  .data-card:nth-child(9) { animation-delay: 0.45s; }
+  .data-card:nth-child(10){ animation-delay: 0.50s; }
+
+  .data-card.selectable { cursor: pointer; }
+  .data-card.selectable:hover { transform: translateY(-8px); box-shadow: 0 12px 24px rgba(0,0,0,0.4); }
+  .data-card.selected { transform: translateY(-12px); }
+  .data-card.required-card { opacity: 0.85; cursor: not-allowed; }
+  .data-card.irrelevant { opacity: 0.35; }
+
+  .card-sensitivity {
+    position: absolute;
+    top: 5px;
+    right: 7px;
+    font-size: 0.55rem;
+    font-weight: 700;
+    opacity: 0.7;
+  }
+
+  .card-emoji { font-size: 1.8rem; }
+  .card-name { font-size: 0.6rem; font-weight: 700; text-align: center; line-height: 1.2; }
+  .card-badge {
+    font-size: 0.55rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 999px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .card-badge.req { background: rgba(220,50,50,0.4); color: #ff9999; }
+  .card-badge.opt { background: rgba(220,180,50,0.3); color: #ffe066; }
+
+  /* Action buttons */
+  .action-zone {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding: 0.5rem 0 0.25rem;
+  }
+
+  .btn-accept {
+    background: linear-gradient(135deg, #2d7a45, #4caf70);
+    color: #fff;
+    border: none;
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    font-weight: 800;
+    border-radius: 50px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 16px rgba(76,175,112,0.35);
+    transition: transform 0.1s, box-shadow 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .btn-accept:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(76,175,112,0.5); }
+  .btn-accept:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-fold {
+    background: linear-gradient(135deg, #7a2d2d, #c05050);
+    color: #fff;
+    border: none;
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    font-weight: 800;
+    border-radius: 50px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 16px rgba(192,80,80,0.3);
+    transition: transform 0.1s, box-shadow 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .btn-fold:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(192,80,80,0.5); }
+
+  /* ══ REVEAL OVERLAY ══ */
+  #reveal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 2rem;
+    backdrop-filter: blur(4px);
+  }
+  #reveal-overlay.show { display: flex; animation: fade-in 0.3s ease; }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+  .reveal-service {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--gold-light);
+  }
+
+  .reveal-scene {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .reveal-box {
+    background: #1e1e2e;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 1.2rem 1.5rem;
+    min-width: 180px;
+    text-align: center;
+  }
+
+  .reveal-box-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+  }
+
+  .reveal-data-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+  }
+
+  .reveal-tag {
+    padding: 0.3rem 0.7rem;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    animation: tag-pop 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .reveal-tag.shared { background: rgba(76,175,112,0.2); border: 1px solid rgba(76,175,112,0.5); color: #80d8a0; }
+  .reveal-tag.sold { background: rgba(220,50,50,0.2); border: 1px solid rgba(220,50,50,0.5); color: #ff8888; }
+  .reveal-tag.used { background: rgba(33,150,243,0.2); border: 1px solid rgba(33,150,243,0.5); color: #88aaff; }
+
+  @keyframes tag-pop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .reveal-arrow {
+    font-size: 2rem;
+    color: var(--text-dim);
+    animation: arrow-pulse 0.8s ease-in-out infinite;
+  }
+  @keyframes arrow-pulse { 0%,100% { transform: translateX(0); opacity: 0.5; } 50% { transform: translateX(6px); opacity: 1; } }
+
+  .reveal-facts {
+    max-width: 500px;
+    width: 100%;
+  }
+  .reveal-fact {
+    padding: 0.65rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    border-left: 3px solid;
+    animation: slide-in 0.3s ease both;
+  }
+  .reveal-fact.bad { background: rgba(220,50,50,0.12); border-color: #e05555; color: #ffaaaa; }
+  .reveal-fact.warn { background: rgba(255,165,0,0.12); border-color: #ff9800; color: #ffcc80; }
+  .reveal-fact.good { background: rgba(76,175,112,0.12); border-color: #4caf70; color: #a0d8b0; }
+  .reveal-fact.tip  { background: rgba(33,150,243,0.12); border-color: #2196f3; color: #90caf9; }
+
+  @keyframes slide-in { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  .reveal-privacy-delta {
+    font-size: 1.5rem;
+    font-weight: 900;
+    text-align: center;
+  }
+  .reveal-privacy-delta.loss { color: #e05555; }
+  .reveal-privacy-delta.neutral { color: var(--gold-light); }
+
+  .btn-continue {
+    background: linear-gradient(135deg, #2a4a7a, #3d6fbd);
+    color: #fff;
+    border: none;
+    padding: 0.85rem 2.5rem;
+    font-size: 1rem;
+    font-weight: 800;
+    border-radius: 50px;
+    cursor: pointer;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 16px rgba(61,111,189,0.4);
+    transition: transform 0.1s;
+  }
+  .btn-continue:hover { transform: translateY(-2px); }
+
+  /* Data broker ticker */
+  .broker-ticker {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.8);
+    border-top: 1px solid rgba(220,50,50,0.4);
+    padding: 0.4rem 1rem;
+    font-size: 0.75rem;
+    color: #ff8888;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    z-index: 50;
+    overflow: hidden;
+    white-space: nowrap;
+    height: 30px;
+  }
+  .broker-ticker-label {
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    color: #ff5555;
+  }
+  .broker-ticker-scroll {
+    overflow: hidden;
+    flex: 1;
+  }
+  .broker-ticker-text {
+    display: inline-block;
+    animation: ticker 18s linear infinite;
+  }
+  @keyframes ticker { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+
+  /* Flying data animation */
+  .flying-data {
+    position: fixed;
+    pointer-events: none;
+    z-index: 200;
+    font-size: 1.5rem;
+    animation: fly-up 1.2s ease-out forwards;
+  }
+  @keyframes fly-up {
+    from { transform: translateY(0) scale(1); opacity: 1; }
+    to   { transform: translateY(-120px) scale(0.4); opacity: 0; }
+  }
+
+  /* ══ BROKER PROFILE PANEL ══ */
+  .broker-panel {
+    position: fixed;
+    right: 0;
+    top: 60px;
+    bottom: 30px;
+    width: 200px;
+    background: rgba(10,10,20,0.92);
+    border-left: 1px solid rgba(220,50,50,0.3);
+    padding: 0.75rem;
+    z-index: 20;
+    overflow-y: auto;
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: width 0.3s;
+  }
+  @media (min-width: 900px) { .broker-panel { display: flex; } }
+
+  .broker-panel-title {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(220,50,50,0.7);
+    text-align: center;
+    margin-bottom: 0.25rem;
+    border-bottom: 1px solid rgba(220,50,50,0.2);
+    padding-bottom: 0.4rem;
+  }
+
+  .broker-silhouette {
+    text-align: center;
+    font-size: 4rem;
+    margin: 0.25rem 0;
+    filter: grayscale(1) brightness(0.4);
+    transition: filter 1s ease;
+  }
+  .broker-silhouette.filling { filter: grayscale(0.5) brightness(0.7); }
+  .broker-silhouette.full   { filter: grayscale(0) brightness(1); }
+
+  .broker-known {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .broker-known-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.4rem;
+    border-radius: 5px;
+    background: rgba(220,50,50,0.1);
+    border: 1px solid rgba(220,50,50,0.2);
+    color: #ff8888;
+    animation: broker-item-in 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes broker-item-in { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .broker-combo {
+    margin-top: 0.25rem;
+    font-size: 0.65rem;
+    color: #ff6666;
+    font-style: italic;
+    padding: 0.3rem 0.4rem;
+    background: rgba(220,50,50,0.07);
+    border-radius: 4px;
+    line-height: 1.4;
+  }
+
+  .broker-score {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #ff5555;
+    font-weight: 700;
+    margin-top: auto;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(220,50,50,0.2);
+  }
+
+  /* ══ GAME OVER ══ */
+  #gameover {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-y: auto;
+    background: radial-gradient(ellipse at 50% 20%, #1a1a3a, #0a0a15);
+    padding: 2rem 1rem 4rem;
+  }
+
+  .gameover-title {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--gold-light);
+    text-align: center;
+    margin-bottom: 0.25rem;
+  }
+
+  .gameover-grade {
+    font-size: 5rem;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1;
+    margin: 0.5rem 0;
+  }
+
+  .gameover-verdict {
+    font-size: 1.1rem;
+    text-align: center;
+    color: #bbb;
+    margin-bottom: 1.5rem;
+    max-width: 480px;
+  }
+
+  .report-card {
+    background: #1e1e2e;
+    border: 1px solid rgba(200,168,75,0.2);
+    border-radius: 16px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 600px;
+    margin-bottom: 1.5rem;
+  }
+
+  .report-section-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    padding-bottom: 0.5rem;
+  }
+
+  .report-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.9rem;
+  }
+  .report-stat:last-child { border-bottom: none; }
+  .report-stat-label { color: #bbb; }
+  .report-stat-val { font-weight: 700; }
+
+  .history-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+    font-size: 0.82rem;
+  }
+  .history-item-icon { font-size: 1.4rem; }
+  .history-item-info { flex: 1; }
+  .history-item-name { font-weight: 700; color: #ddd; }
+  .history-item-detail { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.1rem; }
+  .history-item-action { font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 999px; }
+  .history-item-action.accepted { background: rgba(76,175,112,0.2); color: #80d8a0; }
+  .history-item-action.folded { background: rgba(220,50,50,0.2); color: #ff9999; }
+
+  .lessons-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .lesson-item {
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    border-left: 3px solid var(--blue);
+    background: rgba(33,150,243,0.08);
+    font-size: 0.82rem;
+    color: #a0c4f8;
+    line-height: 1.5;
+  }
+
+  .final-score-bar {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .final-score-item {
+    text-align: center;
+    padding: 0.75rem 1.2rem;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    min-width: 100px;
+  }
+  .final-score-item-val { font-size: 1.8rem; font-weight: 900; }
+  .final-score-item-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-top: 0.2rem; }
+
+  /* Floating notification */
+  .notif {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20,20,40,0.95);
+    border: 1px solid rgba(200,168,75,0.3);
+    border-radius: 10px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #ddd;
+    z-index: 300;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: notif-anim 2.5s ease forwards;
+  }
+  @keyframes notif-anim {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    75%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* tooltip */
+  .data-card[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.95);
+    color: #ddd;
+    font-size: 0.7rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    border: 1px solid rgba(255,255,255,0.1);
+    z-index: 999;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(200,168,75,0.3); border-radius: 999px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ INTRO ══════════════════ -->
+<div id="intro" class="screen active">
+  <div class="intro-logo">🃏</div>
+  <div class="intro-title">PRIVACY POKER</div>
+  <div class="intro-subtitle">A Data Consent Game</div>
+  <p class="intro-tagline">
+    Companies deal you a hand — and ask for your data as currency.
+    You decide what to share, what to keep, and what the real cost is.
+  </p>
+  <div class="intro-chips">
+    <span class="intro-chip" style="background:rgba(74,158,255,0.2);color:#4A9EFF;">📍 Location</span>
+    <span class="intro-chip" style="background:rgba(81,207,102,0.2);color:#51CF66;">🎂 Birthday</span>
+    <span class="intro-chip" style="background:rgba(255,212,59,0.2);color:#FFD43B;">📧 Email</span>
+    <span class="intro-chip" style="background:rgba(255,146,43,0.2);color:#FF922B;">📱 Phone</span>
+    <span class="intro-chip" style="background:rgba(240,62,62,0.2);color:#F03E3E;">🔍 Browsing</span>
+    <span class="intro-chip" style="background:rgba(204,93,232,0.2);color:#CC5DE8;">👥 Contacts</span>
+    <span class="intro-chip" style="background:rgba(246,185,59,0.2);color:#F6B93B;">💳 Payment</span>
+    <span class="intro-chip" style="background:rgba(247,131,172,0.2);color:#F783AC;">🩺 Health</span>
+    <span class="intro-chip" style="background:rgba(32,201,151,0.2);color:#20C997;">💬 Messages</span>
+    <span class="intro-chip" style="background:rgba(255,107,107,0.2);color:#FF6B6B;">📸 Photos</span>
+  </div>
+  <button class="btn-primary" onclick="startGame()">DEAL ME IN</button>
+</div>
+
+<!-- ══════════════════ GAME ══════════════════ -->
+<div id="game" class="screen">
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="hud-meter">
+      <div class="hud-meter-icon">🛡️</div>
+      <div class="hud-meter-info">
+        <div class="hud-meter-label">Privacy</div>
+        <div class="meter-bar"><div class="meter-fill privacy" id="privacy-bar" style="width:100%"></div></div>
+      </div>
+      <div class="meter-value" id="privacy-val">100</div>
+    </div>
+
+    <div class="hud-round">
+      <div class="hud-round-label">Round</div>
+      <div class="hud-round-num" id="round-display">1 / 8</div>
+    </div>
+
+    <div class="hud-meter" style="flex-direction:row-reverse;">
+      <div class="hud-meter-icon">⚡</div>
+      <div class="hud-meter-info" style="text-align:right;">
+        <div class="hud-meter-label">Convenience</div>
+        <div class="meter-bar"><div class="meter-fill convenience" id="conv-bar" style="width:0%"></div></div>
+      </div>
+      <div class="meter-value" id="conv-val" style="text-align:right;">0</div>
+    </div>
+  </div>
+
+  <!-- Arena -->
+  <div class="arena">
+    <div class="table-felt"><div class="table-oval"></div></div>
+
+    <!-- Service -->
+    <div class="service-zone">
+      <div class="dealer-label">🏢 Service Request</div>
+      <div class="service-card" id="service-card">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- Narrative -->
+    <div class="narrative" id="narrative">Select which optional data to share, then Fold or Accept.</div>
+
+    <!-- Hand -->
+    <div class="hand-zone">
+      <div class="hand-label">🤚 Your Personal Data — click optional cards to toggle</div>
+      <div class="hand-cards" id="hand-cards">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="action-zone">
+      <button class="btn-fold" id="btn-fold" onclick="playerFold()">✖ Fold — Skip Service</button>
+      <button class="btn-accept" id="btn-accept" onclick="playerAccept()">✔ Accept Terms</button>
+    </div>
+  </div>
+
+  <!-- Broker panel -->
+  <div class="broker-panel" id="broker-panel">
+    <div class="broker-panel-title">🕵️ Data Broker Profile</div>
+    <div class="broker-silhouette" id="broker-silhouette">👤</div>
+    <div class="broker-known" id="broker-known">
+      <div style="font-size:0.7rem;color:var(--text-dim);text-align:center;font-style:italic;">Nothing yet...</div>
+    </div>
+    <div class="broker-score" id="broker-score"></div>
+  </div>
+
+  <!-- Broker ticker -->
+  <div class="broker-ticker" id="broker-ticker" style="display:none;">
+    <span class="broker-ticker-label">⚠ Data Market</span>
+    <div class="broker-ticker-scroll"><span class="broker-ticker-text" id="ticker-text"></span></div>
+  </div>
+
+</div>
+
+<!-- ══════════════════ REVEAL OVERLAY ══════════════════ -->
+<div id="reveal-overlay">
+  <div class="reveal-service" id="reveal-service-name"></div>
+  <div class="reveal-scene" id="reveal-scene"></div>
+  <div class="reveal-facts" id="reveal-facts"></div>
+  <div class="reveal-privacy-delta" id="reveal-delta"></div>
+  <button class="btn-continue" onclick="continueRound()">NEXT ROUND ▶</button>
+</div>
+
+<!-- ══════════════════ GAME OVER ══════════════════ -->
+<div id="gameover" class="screen">
+  <div class="gameover-title">📊 Privacy Report Card</div>
+  <div class="gameover-grade" id="gameover-grade"></div>
+  <div class="gameover-verdict" id="gameover-verdict"></div>
+  <div class="final-score-bar" id="final-score-bar"></div>
+  <div class="report-card" id="report-history">
+    <div class="report-section-title">Round History</div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+  <div class="report-card" id="report-broker">
+    <div class="report-section-title">🕵️ What Data Brokers Know About You</div>
+    <div id="broker-final-list"></div>
+  </div>
+  <div class="report-card">
+    <div class="report-section-title">💡 Key Takeaways</div>
+    <div class="lessons-list" id="lessons-list"></div>
+  </div>
+  <button class="btn-primary" style="margin-top:1rem;" onclick="restartGame()">♻ Play Again</button>
+</div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════
+//  DATA DEFINITIONS
+// ══════════════════════════════════════════════
+
+const DATA = {
+  location: { name:'Location',       emoji:'📍', color:'#4A9EFF', sensitivity:8,  desc:'Real-time GPS & movement history' },
+  dob:      { name:'Date of Birth',  emoji:'🎂', color:'#51CF66', sensitivity:7,  desc:'Your exact birth date & age' },
+  email:    { name:'Email',          emoji:'📧', color:'#FFD43B', sensitivity:4,  desc:'Your email address' },
+  phone:    { name:'Phone Number',   emoji:'📱', color:'#FF922B', sensitivity:6,  desc:'Your mobile number' },
+  browsing: { name:'Browsing Hist.', emoji:'🔍', color:'#F03E3E', sensitivity:9,  desc:'Every site you\'ve visited' },
+  contacts: { name:'Contacts',       emoji:'👥', color:'#CC5DE8', sensitivity:8,  desc:'Everyone in your phone book' },
+  payment:  { name:'Payment Info',   emoji:'💳', color:'#F6B93B', sensitivity:9,  desc:'Your financial details' },
+  health:   { name:'Health Data',    emoji:'🩺', color:'#F783AC', sensitivity:10, desc:'Medical & biometric data' },
+  messages: { name:'Messages',       emoji:'💬', color:'#20C997', sensitivity:10, desc:'Your private conversations' },
+  photos:   { name:'Photos',         emoji:'📸', color:'#FF6B6B', sensitivity:7,  desc:'Your entire photo library' },
+};
+
+const ALL_DATA_KEYS = Object.keys(DATA);
+
+const SERVICES = [
+  {
+    name: 'WeatherNow',
+    category: 'Free Weather App',
+    icon: '⛅',
+    bgColor: '#1a3a5c',
+    description: 'Accurate local forecasts, rain alerts & hourly updates.',
+    required: ['location'],
+    optional: ['email', 'browsing'],
+    actuallyNeeded: ['location'],
+    convenienceGain: 12,
+    reveals: [
+      { type:'bad',  text:'🔴 Your precise location history is sold to insurance companies to assess risk profiles.' },
+      { type:'bad',  text:'🔴 Movement patterns are packaged and sold to retail analytics firms.' },
+      { type:'warn', text:'🟡 Email is used to send promotional weather alerts — and sold to marketing lists.' },
+      { type:'tip',  text:'💡 A weather app only needs approximate location (city-level). Precise GPS is unnecessary.' },
+    ],
+    brokerAdds: ['location'],
+    combos: { location: 'Knows your home & work addresses from repeated GPS patterns.' },
+    privacyCostPerData: { location:12, email:4, browsing:15 },
+  },
+  {
+    name: 'SocialSphere',
+    category: 'Social Network',
+    icon: '🌐',
+    bgColor: '#1a2a5c',
+    description: 'Connect with friends, share moments, follow trends.',
+    required: ['email', 'dob'],
+    optional: ['location', 'contacts', 'photos', 'browsing'],
+    actuallyNeeded: ['email'],
+    convenienceGain: 20,
+    reveals: [
+      { type:'bad',  text:'🔴 Date of Birth enables demographic profiling — age-targeted ads & sold to data brokers.' },
+      { type:'bad',  text:'🔴 Contacts list is harvested to build a "shadow profile" of non-users — without their consent.' },
+      { type:'bad',  text:'🔴 Your photos are scanned with facial recognition and used to train AI models.' },
+      { type:'warn', text:'🟡 Location check-ins are compiled into a permanent movement history, even after deletion.' },
+      { type:'tip',  text:'💡 A social network only needs your email. DOB, contacts & photos are purely for data harvesting.' },
+    ],
+    brokerAdds: ['email', 'dob', 'contacts', 'photos'],
+    combos: { contacts:'Maps your entire social graph — who you know, how often you interact.', dob:'Calculates life stage for targeted ads (job, kids, retirement).' },
+    privacyCostPerData: { email:5, dob:10, location:14, contacts:18, photos:14, browsing:16 },
+  },
+  {
+    name: 'ShopEasy',
+    category: 'E-Commerce Platform',
+    icon: '🛒',
+    bgColor: '#3a2a10',
+    description: 'Shop millions of products with fast delivery & easy returns.',
+    required: ['email', 'payment'],
+    optional: ['dob', 'location', 'browsing'],
+    actuallyNeeded: ['email', 'payment'],
+    convenienceGain: 18,
+    reveals: [
+      { type:'bad',  text:'🔴 Purchase history is sold to data brokers — your shopping patterns reveal income, health, politics.' },
+      { type:'bad',  text:'🔴 Browsing history is used to dynamically change prices — you may pay more than others.' },
+      { type:'bad',  text:'🔴 Your DOB combined with purchase data is sold to credit scoring companies.' },
+      { type:'warn', text:'🟡 Location data is cross-referenced with in-store visits even when using the app at home.' },
+      { type:'tip',  text:'💡 Dynamic pricing based on browsing data is legal. Use incognito mode for price-sensitive searches.' },
+    ],
+    brokerAdds: ['email', 'payment', 'browsing'],
+    combos: { payment:'Financial behavior profile — spending habits, income bracket, debt likelihood.', browsing:'Consumer intent graph — what you\'re about to buy before you decide.' },
+    privacyCostPerData: { email:5, payment:18, dob:10, location:12, browsing:16 },
+  },
+  {
+    name: 'MapMaster',
+    category: 'Navigation App',
+    icon: '🗺️',
+    bgColor: '#1a3a2a',
+    description: 'Turn-by-turn navigation, live traffic & street views.',
+    required: ['location'],
+    optional: ['contacts', 'browsing'],
+    actuallyNeeded: ['location'],
+    convenienceGain: 16,
+    reveals: [
+      { type:'bad',  text:'🔴 Every route you\'ve ever taken is stored permanently — building a complete movement history.' },
+      { type:'bad',  text:'🔴 Time spent at locations (church, clinic, protest, bar) is inferred and sold to insurers.' },
+      { type:'warn', text:'🟡 Contacts are used to suggest "navigate to [friend]\'s home" — and log your social connections.' },
+      { type:'good', text:'🟢 Navigation is actually one of the clearer data uses — but the retention period is the hidden problem.' },
+      { type:'tip',  text:'💡 Check: does the app allow you to delete your location history? Many don\'t by default.' },
+    ],
+    brokerAdds: ['location'],
+    combos: { location:'Infers religion (place of worship), health (clinic visits), politics (rally attendance) from GPS.' },
+    privacyCostPerData: { location:16, contacts:10, browsing:12 },
+  },
+  {
+    name: 'FitTrack',
+    category: 'Health & Fitness App',
+    icon: '💪',
+    bgColor: '#2a1a3a',
+    description: 'Track workouts, sleep, nutrition and biometrics.',
+    required: ['health', 'email'],
+    optional: ['dob', 'location', 'contacts'],
+    actuallyNeeded: ['health', 'email'],
+    convenienceGain: 14,
+    reveals: [
+      { type:'bad',  text:'🔴 Health data — sleep, heart rate, menstrual cycles — is sold to life insurance companies.' },
+      { type:'bad',  text:'🔴 Fitness data combined with DOB creates a detailed health risk profile used for hiring decisions.' },
+      { type:'bad',  text:'🔴 In the US, health app data is NOT protected by HIPAA. It has been subpoenaed in court cases.' },
+      { type:'warn', text:'🟡 "Challenges" with contacts share your biometric data comparatively with other users.' },
+      { type:'tip',  text:'💡 Health data is the most sensitive category. Read the privacy policy — especially data sharing clauses.' },
+    ],
+    brokerAdds: ['health', 'email', 'dob'],
+    combos: { health:'Complete biometric profile — used to predict disease risk, sold to pharma and insurers.', dob:'Age-stratified health profile — life expectancy modeling for insurance.' },
+    privacyCostPerData: { health:25, email:5, dob:12, location:10, contacts:15 },
+  },
+  {
+    name: 'NewsDaily',
+    category: 'News Aggregator',
+    icon: '📰',
+    bgColor: '#2a2a1a',
+    description: 'Personalized news feed, breaking alerts & deep dives.',
+    required: ['email'],
+    optional: ['browsing', 'location', 'dob'],
+    actuallyNeeded: [],
+    convenienceGain: 8,
+    reveals: [
+      { type:'bad',  text:'🔴 Reading history is mapped to a political profile and sold to political campaign advertisers.' },
+      { type:'bad',  text:'🔴 Content engagement data (what you read longest) is more revealing than what you explicitly share.' },
+      { type:'bad',  text:'🔴 News apps often share data with 135+ advertising partners simultaneously — per their own TOS.' },
+      { type:'warn', text:'🟡 Email + DOB allows cross-referencing with voter rolls — your reading mapped to your real identity.' },
+      { type:'tip',  text:'💡 News can be consumed freely via browser with an ad-blocker. No account needed for most content.' },
+    ],
+    brokerAdds: ['email', 'browsing'],
+    combos: { browsing:'Political ideology score derived from article reading patterns — sold to campaigns.' },
+    privacyCostPerData: { email:5, browsing:18, location:10, dob:8 },
+  },
+  {
+    name: 'CupidConnect',
+    category: 'Dating App',
+    icon: '💘',
+    bgColor: '#3a1a2a',
+    description: 'Find meaningful connections with smart matching.',
+    required: ['email', 'dob', 'location', 'photos'],
+    optional: ['phone', 'health', 'messages', 'browsing'],
+    actuallyNeeded: ['email', 'dob', 'location', 'photos'],
+    convenienceGain: 22,
+    reveals: [
+      { type:'bad',  text:'🔴 Dating apps have been repeatedly hacked — leaking sexual preferences, HIV status, private messages.' },
+      { type:'bad',  text:'🔴 Your relationship status, sexual orientation & preferences are sold to health insurers in some regions.' },
+      { type:'bad',  text:'🔴 Phone number enables account cross-referencing across all platforms you\'ve ever used.' },
+      { type:'bad',  text:'🔴 In-app messages have been read by employees for "safety checks" — documented at multiple companies.' },
+      { type:'tip',  text:'💡 Use a secondary email and never share your real phone number with dating apps.' },
+    ],
+    brokerAdds: ['email', 'dob', 'location', 'photos', 'phone'],
+    combos: { photos:'Facial recognition links your dating profile to all your other online identities.', location:'Home & work pinpointed from habitual location patterns.' },
+    privacyCostPerData: { email:5, dob:12, location:14, photos:16, phone:12, health:25, messages:25, browsing:14 },
+  },
+  {
+    name: 'SmartHome Hub',
+    category: 'IoT Smart Home',
+    icon: '🏠',
+    bgColor: '#1a3a3a',
+    description: 'Control all your smart devices from one dashboard.',
+    required: ['location', 'email'],
+    optional: ['contacts', 'messages', 'payment', 'browsing'],
+    actuallyNeeded: ['location', 'email'],
+    convenienceGain: 20,
+    reveals: [
+      { type:'bad',  text:'🔴 Smart home data (when you wake, sleep, who visits) is the most intimate surveillance possible.' },
+      { type:'bad',  text:'🔴 Voice assistant recordings are retained indefinitely and reviewed by human contractors.' },
+      { type:'bad',  text:'🔴 Your home\'s occupancy patterns are sold to energy companies and insurance firms.' },
+      { type:'bad',  text:'🔴 Payment info stored in hub enables impulse-purchase features — and is a breach target.' },
+      { type:'tip',  text:'💡 Smart home devices should be on a separate network segment (guest WiFi) to limit data access.' },
+    ],
+    brokerAdds: ['location', 'email', 'messages'],
+    combos: { messages:'Voice commands analyzed for mood, health indicators and purchasing intent.', location:'Micro-location tracking within your home — which rooms, when, with whom.' },
+    privacyCostPerData: { location:16, email:5, contacts:12, messages:22, payment:18, browsing:14 },
+  },
+];
+
+// ══════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════
+
+let state = {};
+
+function initState() {
+  state = {
+    round: 0,
+    privacyScore: 100,
+    convenienceScore: 0,
+    brokerData: {},         // { dataKey: count }
+    sharedTotal: {},        // { dataKey: count }
+    history: [],            // { service, action, shared, privacyLost }
+    selectedOptional: new Set(),
+    currentService: null,
+    tickerItems: [],
+  };
+}
+
+// ══════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ══════════════════════════════════════════════
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+//  GAME FLOW
+// ══════════════════════════════════════════════
+
+function startGame() {
+  initState();
+  showScreen('game');
+  loadRound();
+}
+
+function restartGame() {
+  showScreen('intro');
+}
+
+function loadRound() {
+  if (state.round >= SERVICES.length) {
+    endGame();
+    return;
+  }
+
+  state.currentService = SERVICES[state.round];
+  state.selectedOptional = new Set();
+
+  document.getElementById('round-display').textContent = `${state.round + 1} / ${SERVICES.length}`;
+  updateHUD();
+  renderServiceCard();
+  renderHand();
+  updateNarrative('Select optional data cards to share (yellow), then choose to Accept or Fold.');
+  document.getElementById('btn-accept').disabled = false;
+}
+
+function renderServiceCard() {
+  const svc = state.currentService;
+  const el = document.getElementById('service-card');
+
+  const reqTags = svc.required.map(k =>
+    `<span class="ask-tag required">${DATA[k].emoji} ${DATA[k].name}</span>`
+  ).join('');
+
+  const optTags = svc.optional.length > 0
+    ? svc.optional.map(k =>
+        `<span class="ask-tag optional">${DATA[k].emoji} ${DATA[k].name}</span>`
+      ).join('')
+    : `<span class="ask-tag none">None</span>`;
+
+  el.innerHTML = `
+    <div class="service-header">
+      <div class="service-icon" style="background:${svc.bgColor};">${svc.icon}</div>
+      <div class="service-info">
+        <div class="service-name">${svc.name}</div>
+        <div class="service-category">${svc.category}</div>
+        <div class="service-desc">${svc.description}</div>
+      </div>
+    </div>
+    <div class="service-asks">
+      <div class="ask-section">
+        <div class="ask-section-label required">🔒 Required (must share)</div>
+        <div class="ask-tags">${reqTags}</div>
+      </div>
+      <div class="ask-section">
+        <div class="ask-section-label optional">⚠ Requested (optional)</div>
+        <div class="ask-tags">${optTags}</div>
+      </div>
+    </div>
+    <div class="service-benefit">
+      ⚡ Convenience gain: +${svc.convenienceGain} points if accepted
+    </div>
+  `;
+}
+
+function renderHand() {
+  const svc = state.currentService;
+  const container = document.getElementById('hand-cards');
+  container.innerHTML = '';
+
+  ALL_DATA_KEYS.forEach(key => {
+    const d = DATA[key];
+    const isRequired = svc.required.includes(key);
+    const isOptional = svc.optional.includes(key);
+    const isSelected = state.selectedOptional.has(key);
+    const isIrrelevant = !isRequired && !isOptional;
+
+    const card = document.createElement('div');
+    card.className = 'data-card' +
+      (isRequired ? ' required-card' : '') +
+      (isOptional ? ' selectable' + (isSelected ? ' selected' : '') : '') +
+      (isIrrelevant ? ' irrelevant' : '');
+
+    const bg = isRequired ? `rgba(${hexToRgb(d.color)},0.25)` :
+               isOptional && isSelected ? `rgba(${hexToRgb(d.color)},0.35)` :
+               isOptional ? `rgba(${hexToRgb(d.color)},0.15)` :
+               'rgba(255,255,255,0.04)';
+
+    const border = isRequired ? d.color :
+                   isOptional && isSelected ? d.color :
+                   isOptional ? `rgba(${hexToRgb(d.color)},0.4)` :
+                   'rgba(255,255,255,0.08)';
+
+    card.style.cssText = `background:${bg};border-color:${border};`;
+
+    let badge = '';
+    if (isRequired) badge = `<span class="card-badge req">REQUIRED</span>`;
+    else if (isOptional) badge = `<span class="card-badge opt">${isSelected ? 'SHARING' : 'OPTIONAL'}</span>`;
+
+    card.innerHTML = `
+      <span class="card-sensitivity">🔥${d.sensitivity}</span>
+      <span class="card-emoji">${d.emoji}</span>
+      <span class="card-name">${d.name}</span>
+      ${badge}
+    `;
+    card.title = d.desc;
+
+    if (isOptional) {
+      card.addEventListener('click', () => toggleOptional(key));
+    }
+
+    container.appendChild(card);
+  });
+}
+
+function toggleOptional(key) {
+  if (state.selectedOptional.has(key)) {
+    state.selectedOptional.delete(key);
+  } else {
+    state.selectedOptional.add(key);
+  }
+  renderHand();
+
+  const count = state.selectedOptional.size;
+  if (count > 0) {
+    updateNarrative(`Sharing ${count} optional item${count>1?'s':''} — more data = more risk. Ready to decide.`);
+  } else {
+    updateNarrative('No optional data selected. You can still Accept with only required data.');
+  }
+}
+
+function updateNarrative(text) {
+  document.getElementById('narrative').textContent = text;
+}
+
+// ══════════════════════════════════════════════
+//  PLAYER ACTIONS
+// ══════════════════════════════════════════════
+
+function playerAccept() {
+  const svc = state.currentService;
+  document.getElementById('btn-accept').disabled = true;
+
+  // All shared data = required + selected optional
+  const shared = [...svc.required, ...state.selectedOptional];
+
+  // Calculate privacy cost
+  let privacyLost = 0;
+  shared.forEach(k => {
+    privacyLost += (svc.privacyCostPerData[k] || DATA[k].sensitivity * 1.5);
+  });
+  privacyLost = Math.round(privacyLost);
+
+  // Update state
+  state.privacyScore = Math.max(0, state.privacyScore - privacyLost);
+  state.convenienceScore = Math.min(100, state.convenienceScore + svc.convenienceGain);
+
+  shared.forEach(k => {
+    state.sharedTotal[k] = (state.sharedTotal[k] || 0) + 1;
+    state.brokerData[k] = (state.brokerData[k] || 0) + 1;
+  });
+
+  state.history.push({
+    service: svc,
+    action: 'accepted',
+    shared,
+    privacyLost,
+    convenienceGained: svc.convenienceGain,
+  });
+
+  updateHUD();
+  updateBrokerPanel();
+  spawnFlyingData(shared);
+  showReveal(svc, shared, privacyLost, false);
+}
+
+function playerFold() {
+  const svc = state.currentService;
+  state.history.push({
+    service: svc,
+    action: 'folded',
+    shared: [],
+    privacyLost: 0,
+    convenienceGained: 0,
+  });
+
+  showReveal(svc, [], 0, true);
+}
+
+// ══════════════════════════════════════════════
+//  REVEAL
+// ══════════════════════════════════════════════
+
+function showReveal(svc, shared, privacyLost, folded) {
+  const overlay = document.getElementById('reveal-overlay');
+
+  document.getElementById('reveal-service-name').textContent =
+    `${svc.icon} ${svc.name} — ${folded ? 'You Folded' : 'You Accepted'}`;
+
+  // Scene
+  const scene = document.getElementById('reveal-scene');
+  if (folded) {
+    scene.innerHTML = `
+      <div class="reveal-box">
+        <div class="reveal-box-title">🙅 You kept</div>
+        <div class="reveal-data-tags">
+          ${ALL_DATA_KEYS.map(k=>`<span class="reveal-tag used">${DATA[k].emoji} ${DATA[k].name}</span>`).join('')}
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--gold-light);font-size:1rem;padding:1rem;">
+        ✅ Privacy protected<br>
+        <span style="color:var(--text-dim);font-size:0.85rem;">−${svc.convenienceGain} convenience</span>
+      </div>
+    `;
+  } else {
+    const sharedTags = shared.map((k,i) =>
+      `<span class="reveal-tag shared" style="animation-delay:${i*0.08}s">${DATA[k].emoji} ${DATA[k].name}</span>`
+    ).join('');
+
+    const soldKeys = svc.brokerAdds.filter(k => shared.includes(k));
+    const soldTags = soldKeys.length > 0
+      ? soldKeys.map((k,i) => `<span class="reveal-tag sold" style="animation-delay:${i*0.1+0.3}s">${DATA[k].emoji} ${DATA[k].name}</span>`).join('')
+      : '<span style="color:var(--text-dim);font-size:0.8rem;">Nothing sold this time</span>';
+
+    scene.innerHTML = `
+      <div class="reveal-box">
+        <div class="reveal-box-title">📤 You shared</div>
+        <div class="reveal-data-tags">${sharedTags}</div>
+      </div>
+      <div class="reveal-arrow">→</div>
+      <div class="reveal-box">
+        <div class="reveal-box-title">💰 Sold to brokers</div>
+        <div class="reveal-data-tags">${soldTags}</div>
+      </div>
+    `;
+
+    // Add ticker items
+    soldKeys.forEach(k => {
+      const combo = svc.combos[k];
+      if (combo) state.tickerItems.push(`${DATA[k].emoji} ${combo}`);
+    });
+    updateTicker();
+  }
+
+  // Facts
+  const factsEl = document.getElementById('reveal-facts');
+  if (folded) {
+    factsEl.innerHTML = `
+      <div class="reveal-fact good">🟢 Good call — you protected your privacy. Services should work fine without your extra data.</div>
+      <div class="reveal-fact tip">💡 ${svc.reveals.find(r=>r.type==='tip')?.text?.replace('💡 ','') || 'Remember: you can often use services with minimal data sharing.'}</div>
+    `;
+  } else {
+    factsEl.innerHTML = svc.reveals.map((r,i) =>
+      `<div class="reveal-fact ${r.type}" style="animation-delay:${i*0.12}s">${r.text}</div>`
+    ).join('');
+  }
+
+  // Delta
+  const deltaEl = document.getElementById('reveal-delta');
+  if (folded) {
+    deltaEl.className = 'reveal-privacy-delta neutral';
+    deltaEl.textContent = `Privacy: no change ✓`;
+  } else {
+    deltaEl.className = 'reveal-privacy-delta loss';
+    deltaEl.textContent = `Privacy −${privacyLost} pts | Convenience +${svc.convenienceGain} pts`;
+  }
+
+  overlay.classList.add('show');
+  state.round++;
+}
+
+function continueRound() {
+  document.getElementById('reveal-overlay').classList.remove('show');
+  if (state.round >= SERVICES.length) {
+    endGame();
+  } else {
+    loadRound();
+  }
+}
+
+// ══════════════════════════════════════════════
+//  HUD
+// ══════════════════════════════════════════════
+
+function updateHUD() {
+  const pv = state.privacyScore;
+  const cv = state.convenienceScore;
+
+  document.getElementById('privacy-val').textContent = pv;
+  document.getElementById('conv-val').textContent = cv;
+
+  const pBar = document.getElementById('privacy-bar');
+  pBar.style.width = pv + '%';
+  pBar.className = 'meter-fill privacy' +
+    (pv < 40 ? ' danger' : pv < 70 ? ' warn' : '');
+
+  document.getElementById('conv-bar').style.width = cv + '%';
+}
+
+// ══════════════════════════════════════════════
+//  BROKER PANEL
+// ══════════════════════════════════════════════
+
+function updateBrokerPanel() {
+  const knownEl = document.getElementById('broker-known');
+  const silhouette = document.getElementById('broker-silhouette');
+  const scoreEl = document.getElementById('broker-score');
+
+  const count = Object.keys(state.brokerData).length;
+  silhouette.className = 'broker-silhouette' +
+    (count >= 7 ? ' full' : count >= 3 ? ' filling' : '');
+
+  knownEl.innerHTML = '';
+
+  // Show current broker knowledge
+  const svc = SERVICES[state.round - 1];
+  ALL_DATA_KEYS.forEach(k => {
+    if (state.brokerData[k]) {
+      const item = document.createElement('div');
+      item.className = 'broker-known-item';
+      item.innerHTML = `${DATA[k].emoji} <span>${DATA[k].name}</span>`;
+      knownEl.appendChild(item);
+    }
+  });
+
+  // Show combos
+  if (svc) {
+    Object.entries(svc.combos || {}).forEach(([k, combo]) => {
+      if (state.brokerData[k]) {
+        const combo_el = document.createElement('div');
+        combo_el.className = 'broker-combo';
+        combo_el.textContent = combo;
+        knownEl.appendChild(combo_el);
+      }
+    });
+  }
+
+  if (count === 0) {
+    knownEl.innerHTML = '<div style="font-size:0.7rem;color:var(--text-dim);text-align:center;font-style:italic;">Nothing yet...</div>';
+  }
+
+  const maxScore = ALL_DATA_KEYS.length;
+  scoreEl.textContent = `Profile completeness: ${Math.round((count/maxScore)*100)}%`;
+}
+
+// ══════════════════════════════════════════════
+//  TICKER
+// ══════════════════════════════════════════════
+
+function updateTicker() {
+  if (state.tickerItems.length === 0) return;
+  const ticker = document.getElementById('broker-ticker');
+  ticker.style.display = 'flex';
+  document.getElementById('ticker-text').textContent =
+    state.tickerItems.join('   •   ');
+}
+
+// ══════════════════════════════════════════════
+//  FLYING DATA ANIMATION
+// ══════════════════════════════════════════════
+
+function spawnFlyingData(keys) {
+  const hand = document.getElementById('hand-cards');
+  const rect = hand.getBoundingClientRect();
+  keys.slice(0,5).forEach((k, i) => {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'flying-data';
+      el.textContent = DATA[k].emoji;
+      el.style.left = (rect.left + Math.random() * rect.width) + 'px';
+      el.style.top  = (rect.top  + Math.random() * 40) + 'px';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1300);
+    }, i * 80);
+  });
+}
+
+// ══════════════════════════════════════════════
+//  GAME OVER
+// ══════════════════════════════════════════════
+
+function endGame() {
+  showScreen('gameover');
+
+  const privacy = state.privacyScore;
+  const convenience = state.convenienceScore;
+  const shared = Object.values(state.sharedTotal).reduce((a,b)=>a+b,0);
+  const folded = state.history.filter(h=>h.action==='folded').length;
+
+  // Grade
+  let grade, gradeColor, verdict, lessons = [];
+
+  if (privacy >= 80) {
+    grade = 'A+'; gradeColor = '#4caf70';
+    verdict = 'Privacy Champion 🛡️ — You shared the bare minimum and kept your data under control. Excellent digital hygiene!';
+    lessons = [
+      'You correctly identified that most "optional" data is never actually needed for the service to function.',
+      'By folding high-risk services, you protected sensitive categories like health and financial data.',
+      'Real-world tip: always check "App Permissions" and only grant what\'s truly needed.',
+    ];
+  } else if (privacy >= 60) {
+    grade = 'B'; gradeColor = '#8bc34a';
+    verdict = 'Privacy Aware 👍 — You made some smart choices but gave away more than necessary on a few rounds.';
+    lessons = [
+      'Review which services you accepted: most optional data requests were unnecessary for the core feature.',
+      'Consider: every data point you share gets combined with others to build a detailed profile.',
+      'Real-world tip: use temporary emails (like SimpleLogin) and deny location unless absolutely needed.',
+    ];
+  } else if (privacy >= 40) {
+    grade = 'C'; gradeColor = '#ffc107';
+    verdict = 'Oversharing ⚠️ — You traded significant privacy for convenience. Brokers now have a detailed profile on you.';
+    lessons = [
+      'The "optional" label is misleading — companies request this data to sell it, not to improve your experience.',
+      'Your browsing history + location + contacts combined creates a profile more detailed than a government file.',
+      'Real-world tip: read app privacy policies before installing. Look for "third party data sharing" sections.',
+    ];
+  } else {
+    grade = 'D'; gradeColor = '#f44336';
+    verdict = 'Data Exposed ⚠️ — You shared almost everything. Data brokers have a near-complete profile of your life.';
+    lessons = [
+      'Every service you accepted sold your data to an average of 135+ advertising partners simultaneously.',
+      'Health data, messages and payment info shared in this game are the most dangerous — often used in employment decisions, insurance pricing and targeted manipulation.',
+      'Real-world tip: it\'s not too late. Check apps like "Have I Been Pwned", delete unused accounts and review privacy settings.',
+    ];
+  }
+
+  document.getElementById('gameover-grade').style.color = gradeColor;
+  document.getElementById('gameover-grade').textContent = grade;
+  document.getElementById('gameover-verdict').textContent = verdict;
+
+  document.getElementById('final-score-bar').innerHTML = `
+    <div class="final-score-item">
+      <div class="final-score-item-val" style="color:${gradeColor}">${privacy}</div>
+      <div class="final-score-item-label">Privacy Score</div>
+    </div>
+    <div class="final-score-item">
+      <div class="final-score-item-val" style="color:#4A9EFF">${convenience}</div>
+      <div class="final-score-item-label">Convenience</div>
+    </div>
+    <div class="final-score-item">
+      <div class="final-score-item-val" style="color:#e05555">${shared}</div>
+      <div class="final-score-item-label">Data Points Shared</div>
+    </div>
+    <div class="final-score-item">
+      <div class="final-score-item-val" style="color:#51CF66">${folded}</div>
+      <div class="final-score-item-label">Services Declined</div>
+    </div>
+  `;
+
+  // History
+  const histList = document.getElementById('history-list');
+  histList.innerHTML = state.history.map(h => {
+    const svc = h.service;
+    const sharedNames = h.shared.map(k => DATA[k].emoji + DATA[k].name).join(', ') || '—';
+    return `
+      <div class="history-item">
+        <div class="history-item-icon">${svc.icon}</div>
+        <div class="history-item-info">
+          <div class="history-item-name">${svc.name}</div>
+          <div class="history-item-detail">${h.action==='accepted' ? `Shared: ${sharedNames}` : 'Skipped — no data shared'}</div>
+        </div>
+        <span class="history-item-action ${h.action}">${h.action==='accepted' ? '✔ Accepted' : '✖ Folded'}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Broker final list
+  const brokerFinal = document.getElementById('broker-final-list');
+  const brokerKeys = ALL_DATA_KEYS.filter(k => state.brokerData[k]);
+  if (brokerKeys.length === 0) {
+    brokerFinal.innerHTML = '<p style="color:var(--green);text-align:center;">🎉 Nothing! You protected your data.</p>';
+  } else {
+    brokerFinal.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">
+        ${brokerKeys.map(k =>
+          `<span style="padding:0.3rem 0.7rem;border-radius:8px;background:rgba(220,50,50,0.15);border:1px solid rgba(220,50,50,0.3);color:#ff9999;font-size:0.8rem;">${DATA[k].emoji} ${DATA[k].name}</span>`
+        ).join('')}
+      </div>
+      <p style="font-size:0.8rem;color:#aaa;line-height:1.6;">
+        ${brokerKeys.length >= 6
+          ? '⚠️ With this much data, brokers can infer your income, health status, relationship status, political views, and daily routine — and sell this profile to insurers, employers, and advertisers.'
+          : '⚠️ This data has been sold to third-party data brokers who combine it with other sources to build a more complete profile of you.'}
+      </p>
+    `;
+  }
+
+  // Lessons
+  document.getElementById('lessons-list').innerHTML = lessons.map(l =>
+    `<div class="lesson-item">💡 ${l}</div>`
+  ).join('');
+}
+
+// ══════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `${r},${g},${b}`;
+}
+
+function showNotif(text) {
+  const el = document.createElement('div');
+  el.className = 'notif';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+</script>
+</body>
+</html>
